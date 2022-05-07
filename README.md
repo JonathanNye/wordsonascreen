@@ -6,22 +6,22 @@ Words on a Screen is website that displays provided words on your screen. It doe
 
 ## How do I use Words on a Screen?
 
-Words on a Screen is located at https://jonathannye.github.io/wordsonascreen
+Words on a Screen is located at https://jonathannye.github.io/wordsonascreen/
 
 You can provide your own words via the query parameter `words`. For example:
 
-<pre><a href="https://jonathannye.github.io/wordsonascreen?words=hello%20friend">https://jonathannye.github.io/wordsonascreen?<b>words=hello%20friend</b></a></pre>
+<pre><a href="https://jonathannye.github.io/wordsonascreen/?words=hello%20friend">https://jonathannye.github.io/wordsonascreen/?<b>words=hello%20friend</b></a></pre>
 
 Words on a Screen is not clever enough to break your words into multiple lines. We all have our limitations. However, you may give it some help by inserting `%0A` escapes into your provide words. For example:
 
-<pre><a href="https://jonathannye.github.io/wordsonascreen?words=one%20line%0Atwo%20line">https://jonathannye.github.io/wordsonascreen?words=one%20line<b>%0A</b>two%20line</a></pre>
+<pre><a href="https://jonathannye.github.io/wordsonascreen/?words=one%20line%0Atwo%20line">https://jonathannye.github.io/wordsonascreen/?words=one%20line<b>%0A</b>two%20line</a></pre>
 
 Different `mode`s are also supported:
 
 * If you are [feeling salty](https://www.youtube.com/watch?v=3KquFZYi6L0), you may also provide `mode=salt` and your feelings will be vindicated. Example:
-<pre><a href="https://jonathannye.github.io/wordsonascreen?words=so%20saline&mode=salt">https://jonathannye.github.io/wordsonascreen?words=so%20saline<b>&mode=salt</b></a></pre>
+<pre><a href="https://jonathannye.github.io/wordsonascreen/?words=so%20saline&mode=salt">https://jonathannye.github.io/wordsonascreen/?words=so%20saline<b>&mode=salt</b></a></pre>
 * If you enjoy red, green, and pretty snow you may provide `mode=xmas`. Example:
-<pre><a href="https://jonathannye.github.io/wordsonascreen?words=so%20pretty&mode=xmas">https://jonathannye.github.io/wordsonascreen?words=so%20pretty<b>&mode=xmas</b></a></pre>
+<pre><a href="https://jonathannye.github.io/wordsonascreen/?words=so%20pretty&mode=xmas">https://jonathannye.github.io/wordsonascreen/?words=so%20pretty<b>&mode=xmas</b></a></pre>
 
 ## Why does Words on a Screen exist?
 
