@@ -1,0 +1,300 @@
+<html>
+
+<head>
+    <title>words on a screen</title>
+    <link rel="icon" type="image/png" href="images/favicon-16x16.png" sizes="16x16">
+    <link rel="icon" type="image/png" href="images/favicon-32x32.png" sizes="32x32">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: #303030;
+            background-image: radial-gradient(ellipse closest-side, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 150%);
+            overflow: hidden;
+        }
+
+        body.xmas {
+            background: green;
+            background-image: radial-gradient(ellipse closest-side, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 150%);
+            overflow: hidden;
+        }
+
+        #container {
+            position: relative;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        svg,
+        canvas,
+        img {
+            position: absolute;
+        }
+
+        img {
+            width: 100px;
+            height: 100px
+        }
+
+        svg {
+            position: fixed;
+            top: -100%;
+        }
+
+        .saltcanvas {
+            top: 100px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div id="container">
+        <svg id="svgcontainer" version="1.2" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin">
+            <!-- fill is set with JS. Also I couldn't figure out how to do this with CSS -->
+            <text id="text" style="font-family: Helvetica; text-anchor: middle;" y="50%"></text>
+        </svg>
+
+        <canvas id="wordscanvas"></canvas>
+        <canvas id="particlecanvas"></canvas>
+        <img id="salt" src="images/salt.png" style="visibility: hidden;">
+    </div>
+
+    <script>
+        let particles = []
+        let particlesContext
+        let rAFId
+
+        const getWidth = () => window.container.clientWidth
+        const getHeight = () => window.container.clientHeight
+
+        const rnd = (min, max) => {
+            if (typeof min === 'undefined' || typeof max === 'undefined') return Math.round(Math.random())
+            return min + Math.random() * (max - min)
+        }
+
+        const toRad = deg => {
+            return (deg * Math.PI) / 180
+        }
+
+        const renderMultiline = (textNode, value) => {
+            let lineOffset = 0
+            const lines = value.split('\n')
+            lines.forEach((line, idx) => {
+                const tn = document.createTextNode(line)
+                const ts = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
+                ts.setAttributeNS(null, 'dominant-baseline', 'hanging')
+                ts.setAttributeNS(null, 'dy', idx ? '1em' : 0)
+                ts.setAttributeNS(null, 'x', '0')
+                ts.appendChild(tn)
+                textNode.appendChild(ts)
+
+                if (idx === 0) {
+                    // offset if all chars are lowercase
+                    const match = /([acegmnopqrsuvwxyz:=\-\+]+)/.exec(line)
+                    const requiresOffset = match ? match[0] === line : false
+                    // HACK: fix vertical centering when first line doesn't
+                    // go past font midline
+                    lineOffset = requiresOffset ? -10 * (1 / lines.length) : 0
+                }
+            })
+            return lineOffset
+        }
+
+        const renderSVG = value => {
+            const width = getWidth()
+            const height = getHeight()
+
+            const svg = document.querySelector('svg')
+            svg.setAttributeNS(null, 'width', `${width}`)
+            svg.setAttributeNS(null, 'height', `${height}`)
+            svg.setAttributeNS(null, 'viewBox', `0 0 ${width} ${height}`)
+
+            const textNode = document.getElementById('text')
+            textNode.innerHTML = ''
+
+            const lineOffset = renderMultiline(textNode, value)
+
+            const bbox = textNode.getBBox()
+            const widthTransform = width / bbox.width
+            const heightTransform = height / (bbox.height || 1)
+            const scale = widthTransform < heightTransform ? widthTransform : heightTransform
+            const xMid = width / 2
+            let yMid = height / 2 - (bbox.height * scale) / 2 - bbox.y * scale
+
+            if (lineOffset) {
+                yMid += lineOffset
+            }
+
+            textNode.setAttribute('transform', `matrix(${scale}, 0, 0, ${scale}, ${xMid}, ${yMid})`)
+        }
+
+        const renderCanvas = cb => {
+            const width = getWidth()
+            const height = getHeight()
+
+            const elem = document.querySelector('svg')
+            const svgString = new XMLSerializer().serializeToString(elem)
+            // console.log(svgString)
+
+            const wordsCanvas = document.getElementById('wordscanvas')
+            wordsCanvas.setAttributeNS(null, 'width', `${width}`)
+            wordsCanvas.setAttributeNS(null, 'height', `${height}`)
+
+            const wordsContext = wordsCanvas.getContext('2d')
+
+            const DOMURL = self.URL || self.webkitURL || self
+            const img = new Image()
+            const svg = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+            const url = DOMURL.createObjectURL(svg)
+            img.onload = function () {
+                const padding = 0.05
+                const pw = width * padding
+                const ph = height * padding
+                wordsContext.drawImage(img, pw, ph, width - pw * 2, height - ph * 2)
+                cb()
+            }
+            img.src = url
+        }
+
+        let config = {
+            minSize: 2,
+            maxSize: 8,
+            speed: 0.5,
+            quantity: 512,
+            xSeeder: (width) => {
+                // or return rnd(-width, width * 2)?
+                return rnd(0, width)
+            },
+            offsetSeeder: () => {
+                return rnd(50, 400)
+            },
+        }
+
+        const setupSnow = mode => {
+            if (mode == 'salt') {
+                config.maxSize = 4
+                config.quantity = 128
+                config.xSeeder = (width) => {
+                    return 87
+                }
+                config.speed = 1.0
+                config.offsetSeeder = () => {
+                    return 0
+                }
+            }
+
+            const canvas = document.getElementById('particlecanvas')
+            const width = getWidth()
+            const height = getHeight()
+            canvas.setAttributeNS(null, 'width', `${getWidth()}`)
+            canvas.setAttributeNS(null, 'height', `${getHeight()}`)
+            particlesContext = canvas.getContext('2d')
+            for (let i = 0; i < config.quantity; i++) {
+                particles[i] = []
+                particles[i]['size'] = rnd(config.minSize, config.maxSize)
+                particles[i]['x'] = config.xSeeder(width)
+                particles[i]['y'] = rnd(-height * 0.25, height)
+                particles[i]['rotate'] = 1
+                particles[i]['fillAlpha'] = rnd(0.5, 1)
+                particles[i]['translate'] = 0
+                particles[i]['clockwise'] = rnd()
+                particles[i]['offsetSpeed'] = rnd(0, 0.0005)
+                particles[i]['offset'] = config.offsetSeeder()
+                particles[i]['offsetValue'] = rnd(0, 1)
+                particles[i]['offsetStep'] = 0
+                particles[i]['speed'] = rnd(config.minSpeed, config.maxSpeed)
+            }
+        }
+
+        let start, previous
+
+        const animate = timestamp => {
+            if (!start) start = timestamp
+            if (!previous) previous = timestamp
+            const progress = timestamp - start
+            const frameTime = timestamp - previous
+            previous = timestamp
+
+            const width = getWidth()
+            const height = getHeight()
+            particlesContext.clearRect(0, 0, width, height)
+
+            for (let i = 0; i < config.quantity; i++) {
+                particlesContext.save()
+                let p = particles[i]
+
+                particlesContext.fillStyle = `rgba(255,255,255,${p.fillAlpha})`
+
+                if (p.y > height) {
+                    p.y = -rnd(p.size, height)
+                    p.x = config.xSeeder(width)
+                    p.translate = 0
+                    p.rotate = 0
+                    p.offset = 0
+                }
+
+                let speed = config.speed / p.size
+                p.rotate = progress * speed
+                p.offsetValue = ((Math.sin(progress * p.offsetSpeed) + 1) / 2 - 0.5)
+
+                p.y = p.y + speed * frameTime
+
+                particlesContext.translate(p.translate + p.x + p.offsetValue * p.offset, p.y)
+                // context.translate(p.x + p.offsetValue * p.offset, p.y)
+                particlesContext.rotate(p.clockwise ? toRad(p.rotate) : -toRad(p.rotate))
+
+                particlesContext.fillRect(0, 0, p.size, p.size)
+                particlesContext.restore()
+            }
+
+            rAFId = requestAnimationFrame(animate)
+        }
+
+        const render = (value) => {
+            renderSVG(value)
+            renderCanvas(() => {
+                rAFId = requestAnimationFrame(animate)
+            })
+        }
+
+        const update = () => {
+            const url = new URL(location.href)
+            let words = url.searchParams.get('word') || 'heck'
+            let mode = url.searchParams.get('mode')
+            switch(mode) {
+                case 'salt':
+                    document.getElementById('text').style.fill = '#ffffff'
+                    document.getElementById('salt').style.visibility = 'visible'
+                    document.getElementById('particlecanvas').classList.add('saltcanvas')
+                    setupSnow(mode)
+                    break;
+                case 'xmas':
+                    document.getElementById('text').style.fill = '#dd0000'
+                    document.body.classList.add('xmas')
+                    setupSnow(mode)
+                    break;
+                default:
+                    document.getElementById('text').style.fill = '#ffffff'
+                    break;
+            }
+            render(words)
+        }
+
+        update()
+    </script>
+</body>
+
+</html>
