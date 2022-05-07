@@ -272,7 +272,7 @@
 
         const update = () => {
             const url = new URL(location.href)
-            let words = url.searchParams.get('word') || 'heck'
+            let words = url.searchParams.get('words') || 'heck'
             let mode = url.searchParams.get('mode')
             switch(mode) {
                 case 'salt':
